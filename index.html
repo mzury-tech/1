@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>mzury.web: console and TV display calibrator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#eceef0;--surface:#fff;--text:#14171a;--muted:#5a6470;--line:#cfd4da;--accent:#1f5bd8;--accent-ink:#fff;--warn:#b25b00;--head:#eceef0;
+--hd:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;--bd:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15181b;--surface:#1d2125;--text:#e9edf1;--muted:#9aa5b1;--line:#333a41;--accent:#6b9bff;--accent-ink:#0b1220;--warn:#f0a050;--head:#15181b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15181b;--surface:#1d2125;--text:#e9edf1;--muted:#9aa5b1;--line:#333a41;--accent:#6b9bff;--accent-ink:#0b1220;--warn:#f0a050;--head:#15181b;color-scheme:dark}
+html{height:100%;scroll-padding-top:calc(env(safe-area-inset-top,0px) + 64px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font:400 1rem/1.6 var(--bd)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--head);z-index:10}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.logo{width:36px;height:36px;flex:none}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--head);border-bottom:1px solid var(--line)}
+.bar{max-width:1080px;margin:0 auto;padding:10px 20px;display:flex;align-items:center;gap:20px}
+.brand{display:flex;align-items:center;gap:10px;font:800 1.25rem var(--hd);text-decoration:none;margin-right:auto}
+.bar a.nav{text-decoration:none;color:var(--muted);font-weight:500}
+.bar a.nav:hover{color:var(--text)}
+main{max-width:1080px;margin:0 auto;padding:0 20px}
+.hero{padding:56px 0 36px;display:grid;gap:28px}
+h1{font:800 clamp(2.2rem,6vw,4rem)/1.04 var(--hd);margin:0;letter-spacing:-.02em;max-width:15ch}
+.lede{font-size:1.15rem;color:var(--muted);max-width:52ch;margin:0}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{font:600 1rem var(--bd);padding:12px 20px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);cursor:pointer;text-decoration:none;display:inline-block}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.wedge{display:flex;height:96px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.wedge span{flex:1;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font:500 .75rem var(--bd);color:transparent}
+.wedge span:hover{color:#888}
+.wcap{margin:8px 0 0;color:var(--muted);font-size:.9rem}
+section{padding:44px 0;border-top:1px solid var(--line)}
+h2{font:800 clamp(1.6rem,3.6vw,2.2rem)/1.15 var(--hd);margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 24px;max-width:60ch}
+.wiz{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:28px;align-items:start}
+@media (max-width:760px){.wiz{grid-template-columns:1fr}}
+.ctl{display:grid;gap:14px}
+[hidden]{display:none!important}
+label.f{display:grid;gap:4px;font-weight:600;font-size:.95rem}
+select{font:400 1rem var(--bd);padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--text);width:100%}
+.out{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 22px 20px;min-width:0}
+.out h3{font:800 1.1rem var(--hd);margin:20px 0 8px}
+.out ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.out li label{display:flex;gap:10px;align-items:flex-start;cursor:pointer;line-height:1.5}
+.out input{margin-top:.35em;accent-color:var(--accent);flex:none}
+.out li.warn label span::before{content:"Check HDMI: ";color:var(--warn);font-weight:600}
+.out li.warn{color:var(--warn)}
+.out p.n{color:var(--muted);font-size:.92rem;margin:10px 0 0}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.stage{position:relative;background:#000}
+#cv{display:block;width:100%;height:min(60vh,460px);background:#000;border-radius:10px;border:1px solid var(--line)}
+#stage:fullscreen #cv,#stage:-webkit-full-screen #cv{height:100vh;border:0;border-radius:0}
+#hint{color:var(--muted);margin:10px 0 0;max-width:70ch}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:28px}
+.why h3{font:800 1.1rem var(--hd);margin:0 0 6px}
+.why p{margin:0;color:var(--muted)}
+footer{max-width:1080px;margin:0 auto;padding:28px 20px 48px;color:var(--muted);font-size:.9rem;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="mark" viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#18c9a5"/></linearGradient></defs><rect x="4" y="8" width="56" height="38" rx="8" fill="url(#lg)"/><rect x="11" y="15" width="42" height="24" rx="3" fill="#141a22"/><rect x="14" y="18" width="7" height="18" fill="#05070a"/><rect x="21" y="18" width="7" height="18" fill="#2a2f36"/><rect x="28" y="18" width="7" height="18" fill="#6a7078"/><rect x="35" y="18" width="7" height="18" fill="#b5b9be"/><rect x="42" y="18" width="7" height="18" fill="#fff"/><rect x="26" y="47" width="12" height="5" fill="url(#lg)"/><rect x="16" y="53" width="32" height="5" rx="2.5" fill="url(#lg)"/></symbol></svg>
+
+<header><div class="bar">
+<a class="brand" href="#top"><svg class="logo"><use href="#mark"/></svg>mzury.web</a>
+<a class="nav" href="#setup">Setup</a><a class="nav" href="#cards">Test cards</a><a class="nav" href="#why">Why it works</a>
+</div></header>
+
+<main id="top">
+<div class="hero">
+<h1>Set up your display once. Know it’s right.</h1>
+<p class="lede">Pick your console, phone, computer or TV, and your connection. mzury.web gives you the exact checklist for your setup, then test patterns to confirm black level, white clipping and motion.</p>
+<div class="cta"><a class="btn primary" href="#setup">Build my checklist</a><a class="btn" href="#cards">Open test cards</a></div>
+<div><div class="wedge" id="wedge" role="img" aria-label="Grayscale step wedge from black to white"></div>
+<p class="wcap">The darkest steps are what the black level card checks. Hover a step to read its value.</p></div>
+</div>
+
+<section id="setup">
+<h2>Your setup checklist</h2>
+<p class="sub">Choose what you own. Settings that need HDMI 2.1 are flagged if you pick HDMI 2.0.</p>
+<div class="wiz">
+<div class="ctl">
+<label class="f">Console or device<select id="console"></select></label>
+<label class="f" id="mrow" hidden>Model<select id="model"></select></label>
+<label class="f">Display type<select id="display"></select></label>
+<label class="f">Connection<select id="hdmi"><option>HDMI 2.1</option><option>HDMI 2.0</option></select></label>
+<label class="f">Preset model<select id="preset"></select></label>
+<button class="btn" id="copy" type="button">Copy setup card</button>
+<span id="copied" role="status" style="color:var(--muted);font-size:.9rem"></span>
+</div>
+<div class="out" id="out" aria-live="polite"></div>
+</div>
+</section>
+
+<section id="cards">
+<h2>Test cards</h2>
+<p class="sub">Connect your console or PC to the display you are tuning, then open a card. Use full screen for an accurate result.</p>
+<div class="tabs" role="group" aria-label="Test cards">
+<button class="btn" type="button" data-m="black" aria-pressed="true">Black level</button>
+<button class="btn" type="button" data-m="white" aria-pressed="false">White clipping</button>
+<button class="btn" type="button" data-m="motion" aria-pressed="false">Motion</button>
+<button class="btn" type="button" id="fs">Full screen</button>
+</div>
+<div class="stage" id="stage"><canvas id="cv" aria-label="Calibration test card"></canvas></div>
+<p id="hint"></p>
+</section>
+
+<section id="why">
+<h2>Why it works</h2>
+<div class="why">
+<div><h3>Matches your exact setup</h3><p>The steps use real menu names for PS5, Xbox and PC, plus brand notes for LG, Samsung, Sony, ASUS and BenQ.</p></div>
+<div><h3>Honest about bandwidth</h3><p>4K at 120 Hz and VRR need HDMI 2.1. On HDMI 2.0 those steps are flagged instead of hidden, so you know why.</p></div>
+<div><h3>Runs in your browser</h3><p>The test cards are drawn on an HTML5 canvas. The motion card measures your screen’s real refresh rate.</p></div>
+</div>
+</section>
+</main>
+<footer>Menu names vary by model and firmware year, so treat presets as a starting point. The white clipping card is SDR. For true HDR use PS5 Adjust HDR, the Xbox Calibration app or Windows HDR Calibration.</footer>
+
+<script>
+const $=id=>document.getElementById(id);
+const CON={
+"PS5":["Settings > Screen and Video > Video Output: set Resolution to Automatic.","Set Enable 120 Hz Output to Automatic so games can run at 120 FPS when bandwidth allows.","Set VRR to Automatic. Apply VRR to Unsupported Games is optional for older titles.","Make sure ALLM or Instant Game Response is on at the display.","4K Video Transfer Rate: Automatic. If the picture drops out on a long or older cable, try -1 or -2.","Set HDR to On When Supported, then run Adjust HDR.","Deep Color Output: Automatic.","RGB Range: Automatic. If blacks look gray or crushed, match the display’s black level setting."],
+"Xbox Series X":["Settings > General > TV & display options > Video modes.","Tick Allow 4K, Allow HDR10, Allow variable refresh rate and Allow auto low-latency mode.","Set Refresh rate to 120 Hz.","Under Video fidelity & overscan, use 10-bit color depth if available.","Run the Xbox Calibration app for HDR."],
+"PC":["Settings > System > Display > Advanced display: pick the highest refresh rate.","Enable G-SYNC or FreeSync VRR in the NVIDIA or AMD control panel.","Turn on Use HDR in Windows, then run the Windows HDR Calibration app.","Set Output dynamic range to Full in the GPU control panel."]};
+CON["Xbox Series S"]=CON["Xbox Series X"].concat(["Series S 120 Hz modes are mostly at lower resolutions such as 1440p."]);
+const PHONES=["iPhone","Android phone"];
+const P60="This display is 60 Hz, so there is no refresh rate to change.",PH="Adaptive OLED display up to 120 Hz (ProMotion).";
+const PMOD={"iPhone":{
+"iPhone 18 Pro and Pro Max (2026)":[120,[PH]],
+"iPhone 17, Air, 17 Pro and Pro Max (2025)":[120,[PH]],
+"iPhone 16 Pro and Pro Max (2024)":[120,[PH]],
+"iPhone 16, 16 Plus and 16e (2024 to 2025)":[60,[P60]],
+"iPhone 15 Pro and Pro Max (2023)":[120,[PH]],
+"iPhone 15 and 15 Plus (2023)":[60,[P60]],
+"iPhone 14 Pro and Pro Max (2022)":[120,[PH]],
+"iPhone 14 and 14 Plus (2022)":[60,[P60]],
+"iPhone 13 Pro and Pro Max (2021)":[120,[PH]],
+"iPhone 13 and 13 mini (2021)":[60,[P60]],
+"iPhone 12 series (2020)":[60,[P60]],
+"iPhone SE (2020 and 2022)":[60,[P60,"This is an LCD screen, so black looks dark gray rather than true black. That is normal."]]},
+"Android phone":{
+"Samsung Galaxy S, Z and Note (2020 and newer)":[120,["Samsung: Settings > Display > Motion smoothness, choose Adaptive (up to 120 Hz) instead of Standard (60 Hz).","Samsung: set Screen mode to Natural, which is more accurate than Vivid.","Samsung: turn off Eye comfort shield while you test."]],
+"Samsung Galaxy A and M (mid-range)":[90,["Galaxy A and M models run at 60, 90 or 120 Hz. Check your model’s spec sheet.","Samsung: Settings > Display > Motion smoothness, choose the higher option if it is shown.","Samsung: set Screen mode to Natural, which is more accurate than Vivid."]],
+"Google Pixel (6 and newer)":[120,["Pixel: Settings > Display > Smooth Display, turn it on. The maximum is 60 to 120 Hz depending on the model.","Pixel: set Colors to Natural for the most accurate picture, and turn off Night Light while you test."]],
+"OnePlus, OPPO and realme":[120,["Settings > Display & brightness > Screen refresh rate, choose the highest option (names vary).","Pick the most natural or accurate screen color mode, not a vivid one."]],
+"Xiaomi, Redmi and POCO":[120,["Settings > Display > Refresh rate, choose the highest value (names vary).","Choose an Original or standard color scheme, not a saturated one."]],
+"Motorola, Nothing, Sony and other brands":[120,["Look under Settings > Display for Refresh rate or Smooth display and choose the highest option.","Pick a natural color mode and turn off adaptive brightness while you test."]],
+"Gaming phones (ASUS ROG, RedMagic and similar)":[144,["Set the refresh rate to the highest value, often 144 Hz or more, in the display settings.","Check the phone’s game mode app so it doesn’t override the refresh rate per game."]],
+"Budget Android phones (60 Hz)":[60,[P60,"Many budget panels are LCD, where black looks dark gray. That is normal for LCD."]]},
+"PC":{
+"Gaming laptop (144 to 240 Hz)":[144,["Windows: Settings > System > Display > Advanced display, set the refresh rate to the highest value. Plug in the charger first.","Enable G-SYNC or FreeSync in the GPU control app if your panel supports it.","Set the laptop’s performance mode (Turbo or Performance) so the refresh rate doesn’t drop on battery."]],
+"Thin and light laptop (60 Hz)":[60,[P60,"Many thin laptops use LCD screens, where black looks dark gray. That is normal for LCD."]],
+"OLED laptop (60 to 120 Hz)":[120,["OLED laptops often use a lower refresh rate on battery. Set the highest value while plugged in.","Turn off auto-dimming and adaptive brightness while you test."]],
+"Lenovo Legion and LOQ (gaming)":[144,["Lenovo Vantage or Legion Space: use Performance mode while plugged in, and set the refresh rate to the highest value.","Use the GPU working mode setting (Discrete GPU) for G-SYNC or FreeSync, if your model has it.","Lenovo Vantage: turn off Eye Care mode while you test."]],
+"Lenovo ThinkPad, IdeaPad and Yoga":[90,["Models run at 60 to 120 Hz, so check your spec sheet.","Lenovo Vantage: turn off Eye Care mode while you test.","Windows: Settings > System > Display > Advanced display, choose the highest refresh rate. Some models drop it on battery."]],
+"ASUS ROG and TUF (gaming)":[144,["Armoury Crate: set GPU Mode to Ultimate for G-SYNC if your model has it (this may need a restart).","Armoury Crate: turn off Panel Power Saver, which lowers the refresh rate on battery.","Armoury Crate: pick a GameVisual color mode, and use Performance or Turbo mode while plugged in."]],
+"ASUS Zenbook and Vivobook":[90,["Models run at 60 to 120 Hz, so check your spec sheet.","MyASUS or ASUS Splendid: choose the Normal color mode and turn off Eye Care while you test.","Turn off power saving features that lower the refresh rate on battery."]],
+"HP OMEN and Victus (gaming)":[144,["OMEN Gaming Hub: use Performance mode while plugged in.","Use Discrete graphics mode (in OMEN Gaming Hub or the BIOS) if your model offers it, for G-SYNC.","Windows: Settings > System > Display > Advanced display, choose the highest refresh rate."]],
+"HP Spectre, Envy, Pavilion and EliteBook":[90,["Models run at 60 to 120 Hz, so check your spec sheet.","HP Eye Ease or low blue light mode: turn it off while you test.","Windows: Settings > System > Display > Advanced display, choose the highest refresh rate."]],
+"Dell Alienware and G-series (gaming)":[144,["Alienware Command Center: use Performance mode while plugged in.","Turn on G-SYNC in the NVIDIA Control Panel if your panel supports it.","Windows: Settings > System > Display > Advanced display, choose the highest refresh rate."]],
+"Dell XPS, Inspiron and Latitude":[90,["Models run at 60 to 120 Hz, so check your spec sheet.","Dell ComfortView (low blue light): turn it off while you test.","Windows: Settings > System > Display > Advanced display, choose the highest refresh rate."]],
+"Desktop PC with a monitor (60 to 360 Hz)":[144,["Use a DisplayPort or HDMI port and cable that supports the monitor’s refresh rate.","Set the refresh rate in Windows Advanced display settings, not only in the monitor menu."]]},
+"Mac":{
+"MacBook Pro 14 and 16 inch (2021 and newer)":[120,["Adaptive display up to 120 Hz (ProMotion)."]],
+"MacBook Pro 13 inch (2020 to 2022)":[60,[P60]],
+"MacBook Air (2020 and newer)":[60,[P60,"Check newer models in case Apple has changed the display."]],
+"iMac 24 inch (2021 and newer)":[60,[P60]],
+"Studio Display or Pro Display XDR":[60,[P60]],
+"Mac with a third-party monitor":[120,["Choose the monitor’s highest refresh rate in System Settings > Displays. Cable and port limits apply."]]}};
+const COMP=["PC","Mac"];
+CON["Mac"]=["Apple menu > System Settings > Displays: set Refresh Rate to ProMotion (or the highest option) if your display offers it.","Turn off True Tone and Night Shift in Displays while you test.","Turn off Automatically adjust brightness in Displays so the level stays fixed.","For an external monitor, turn on High Dynamic Range in Displays only if the monitor supports HDR.","Turn off Low Power Mode on a MacBook, which can dim the screen."];
+CON["iPhone"]=["Settings > Display & Brightness: set brightness by hand and turn off True Tone and Night Shift while you test.","Settings > Accessibility > Display & Text Size: turn off Auto-Brightness so the level stays fixed.","On ProMotion models (iPhone 13 Pro and newer), turn off Settings > Accessibility > Motion > Limit Frame Rate to allow 120 Hz.","Turn off Low Power Mode, which can lower the refresh rate."];
+CON["Android phone"]=["Settings > Display: set Refresh rate or Motion smoothness to High (the name varies by brand).","Turn off Adaptive brightness and set brightness by hand while you test.","Turn off Night light, Eye comfort shield or similar blue-light filters.","Choose the Natural or sRGB color mode for accurate colors. Vivid oversaturates.","Turn off Battery saver, which can cap brightness and refresh rate."];
+const DSP={
+"OLED TV":["Use Game or Game Optimizer picture mode.","Turn off motion smoothing (TruMotion, Auto Motion Plus, Motionflow).","Set sharpness to its neutral value, often 0.","Make sure ALLM or Instant Game Response is on.","Turn off auto-dimming and energy-saving features."],
+"IPS Gaming Monitor":["Set Overdrive to Medium or Normal. Maximum often leaves bright trails.","Enable Adaptive-Sync or FreeSync in the monitor menu.","Set sharpness to neutral and turn off dynamic contrast."],
+"VA Panel":["Set Overdrive to a middle level to reduce dark smearing.","Enable Adaptive-Sync or FreeSync in the monitor menu.","Turn off local dimming or dynamic contrast if dark scenes pump.","Keep gamma near 2.2 and sharpness neutral."]};
+DSP["Computer screen"]=["Set the screen to its native resolution, and use a standard or sRGB picture mode.","Turn off dynamic contrast and any blue-light filter (Night light, Night Shift) while you test.","Test in a dim room with the card in full screen."];
+DSP["Phone screen"]=["Test in the room lighting you normally use, at the brightness you normally use.","On OLED phones, pure black pixels switch off, so box 0 should look completely black.","Hold the phone in landscape and use full screen if your browser allows it."];
+const PRE={
+"None (manual)":[null,[]],
+"LG C-Series OLED":["OLED TV",["Enable HDMI Ultra HD Deep Colour for your port and turn on Game Optimizer.","Turn on Instant Game Response and VRR or G-SYNC.","Color Temperature: Warm 50 on recent models (Warm 2 on older ones).","For HDR games use HGiG tone mapping."]],
+"Samsung QD-OLED":["OLED TV",["Turn on Game Mode and enable VRR in Game Mode Settings.","Enable Input Signal Plus on the HDMI port you use.","Color Tone: Warm2 is the usual pick for a D65 white point.","Turn off Game Motion Plus unless you like the effect."]],
+"Sony Bravia OLED":["OLED TV",["Set HDMI Signal Format to Enhanced Format (VRR) for your port.","Use Game mode and turn off Motionflow.","Use an Expert or D65 color temperature setting."]],
+"ASUS gaming monitor":["IPS Gaming Monitor",["Use a GameVisual Racing or FPS mode, then fine-tune.","Set Overdrive (Trace Free) to a middle value.","Motion-blur reduction (ELMB) often cannot run with VRR. Pick one."]],
+"BenQ gaming monitor":["IPS Gaming Monitor",["Use a Game or FPS mode and set AMA to a middle-high level.","Raise Black eQualizer only until shadows look natural."]]};
+const LIM=["120","VRR","variable refresh"];
+function fill(id,keys){$(id).innerHTML=keys.map(k=>"<option>"+k+"</option>").join("")}
+fill("console",Object.keys(CON));fill("display",Object.keys(DSP));fill("preset",Object.keys(PRE));
+let plain="";
+function build(){
+ const c=$("console").value,d=$("display").value,h=$("hdmi").value,p=$("preset").value,ph=PHONES.includes(c),two=!ph&&h==="HDMI 2.0";$("hdmi").disabled=ph;
+ let st=CON[c];const pm=PMOD[c]?PMOD[c][$("model").value]:null;
+ if(pm){if(pm[0]<=60)st=st.filter(s=>!/ProMotion|Refresh rate or Motion smoothness|highest refresh rate/.test(s));st=st.concat(pm[1])}
+ const S=[[ph?"Phone settings":COMP.includes(c)?"Computer settings":"Console settings",st.map(s=>[s,two&&LIM.some(k=>s.includes(k))])],[ph?"Phone screen":"TV or monitor picture",DSP[d].map(s=>[s,0])]];
+ if(PRE[p][1].length)S.push(["Preset: "+p,PRE[p][1].map(s=>[s,0])]);
+ if(!ph&&c!=="Mac")S.push(["HDR tone mapping",[["On the TV, prefer HGiG tone mapping for games so only the console does the tone mapping.",0],["PS5: Settings > Screen and Video > Video Output > Adjust HDR. On each screen press up or down until the symbol just disappears.",0],["Xbox and PC: use the Xbox Calibration app or the Windows HDR Calibration app.",0]]]);
+ let note=ph?"Phone panels vary a lot between models. Calibrate by eye at your normal brightness, and check the test cards in landscape.":two?"HDMI 2.0 cannot carry 4K at 120 Hz. Use 4K at 60 Hz, or 1440p or 1080p at 120 Hz if your device and display support it. VRR is generally an HDMI 2.1 feature.":"Use a certified Ultra High Speed HDMI cable (48 Gbps) to avoid dropouts. PS5 output is commonly cited at 32 Gbps and Xbox Series X at 40 Gbps.";
+ $("out").innerHTML=S.map(([t,a])=>"<h3>"+t+"</h3><ul>"+a.map(([s,w])=>"<li"+(w?" class=\"warn\"":"")+"><label><input type=\"checkbox\"><span>"+s+"</span></label></li>").join("")+"</ul>").join("")+"<p class=\"n\">"+note+"</p>";
+ plain="mzury.web setup: "+c+" on "+d+" via "+h+"\n"+S.map(([t,a])=>"\n"+t+"\n"+a.map(([s])=>"- "+s).join("\n")).join("\n")+"\n\n"+note;
+}
+["console","display","hdmi"].forEach(i=>$(i).addEventListener("change",build));
+$("console").addEventListener("change",()=>{syncModel();const cv2=$("console").value,dv=$("display");if(PHONES.includes(cv2))dv.value="Phone screen";else if(COMP.includes(cv2))dv.value="Computer screen";else if(dv.value==="Phone screen"||dv.value==="Computer screen")dv.value="OLED TV";build()});
+$("preset").addEventListener("change",()=>{const d=PRE[$("preset").value][0];if(d)$("display").value=d;build()});
+$("copy").addEventListener("click",async()=>{
+ try{await navigator.clipboard.writeText(plain);$("copied").textContent="Copied to clipboard."}
+ catch(e){const t=document.createElement("textarea");t.value=plain;document.body.appendChild(t);t.select();let ok=false;try{ok=document.execCommand("copy")}catch(_){}t.remove();$("copied").textContent=ok?"Copied to clipboard.":"Copy is blocked here. Select the checklist text and copy it."}
+});
+build();
+
+function syncModel(){const m=PMOD[$("console").value];$("mrow").hidden=!m;if(m)$("model").innerHTML=Object.keys(m).map(k=>"<option>"+k+"</option>").join("")}
+$("model").addEventListener("change",build);
+/* hero wedge */
+$("wedge").innerHTML=[0,2,4,6,8,12,16,24,40,64,96,128,160,192,224,255].map(v=>"<span style=\"background:rgb("+v+","+v+","+v+")\">"+v+"</span>").join("");
+
+/* test cards */
+const cv=$("cv"),x=cv.getContext("2d");let mode="black",raf=0,px=0,last=0,n=0,t0=0,hz=0;
+const HINT={black:"Lower brightness until box 0 looks pure black, then raise it only until boxes 2 to 4 are faintly visible.",white:"You should see every box except 255. If more vanish, lower contrast or brightness. This card is SDR.",motion:"Watch the white bar. Smooth motion with no judder or tearing means the refresh rate is stable. The reading below is this screen’s measured refresh rate."};
+const g=v=>"rgb("+v+","+v+","+v+")";
+function size(){const r=cv.getBoundingClientRect(),d=window.devicePixelRatio||1;cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d);x.setTransform(d,0,0,d,0,0);draw()}
+function boxes(L,bg,fg){const w=cv.clientWidth,h=cv.clientHeight,b=w/L.length;x.fillStyle=bg;x.fillRect(0,0,w,h);L.forEach((v,i)=>{x.fillStyle=g(v);x.fillRect(i*b+6,h*.28,b-12,h*.46);x.fillStyle=fg;x.font="14px sans-serif";x.textAlign="center";x.fillText(v,i*b+b/2,h*.84)});x.font="15px sans-serif";x.fillText(HINT[mode],w/2,h*.12,w-24)}
+function draw(){
+ if(mode==="black")boxes([0,2,4,6,8,10,12,14,16,20],"#000","#777");
+ else if(mode==="white")boxes([235,240,245,248,250,252,254,255],"#fff","#666");
+}
+function motion(t){
+ if(mode!=="motion")return;const w=cv.clientWidth,h=cv.clientHeight;
+ if(!last){last=t;t0=t}
+ px=(px+(t-last)/1000*900)%(w+90);last=t;n++;
+ if(t-t0>=1000){hz=n*1000/(t-t0);n=0;t0=t}
+ x.fillStyle="#000";x.fillRect(0,0,w,h);x.fillStyle="#222";
+ for(let y=h*.35;y<h*.75;y+=18)x.fillRect(0,y,w,1);
+ x.fillStyle="#fff";x.fillRect(px-90,h*.4,80,h*.3);
+ x.fillStyle="#999";x.font="15px sans-serif";x.textAlign="center";
+ x.fillText("Measured refresh: "+(hz?hz.toFixed(0)+" Hz":"measuring…"),w/2,h*.12);
+ raf=requestAnimationFrame(motion);
+}
+function setMode(m){mode=m;cancelAnimationFrame(raf);last=0;n=0;hz=0;$("hint").textContent=HINT[m];
+ document.querySelectorAll(".tabs [data-m]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m));
+ if(m==="motion")raf=requestAnimationFrame(motion);else draw()}
+document.querySelectorAll(".tabs [data-m]").forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.m)));
+$("fs").addEventListener("click",()=>{const s=$("stage"),f=s.requestFullscreen||s.webkitRequestFullscreen;try{if(f)f.call(s);else $("hint").textContent="Full screen isn’t available in this browser. Rotate your phone to landscape and scroll so the card fills the screen."}catch(e){}});
+if(window.ResizeObserver)new ResizeObserver(size).observe(cv);else window.addEventListener("resize",size);
+$("hint").textContent=HINT.black;size();
+</script>
+</body>
+</html>
